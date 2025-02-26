@@ -1,0 +1,14 @@
+name: tour-project
+
+services:
+  tour-admin:
+    build: .
+    image: tour-admin:latest
+    ports:
+      - "8084:8084"
+    env_file:
+      - .env
+
+networks:
+  default:
+    name: tour_network

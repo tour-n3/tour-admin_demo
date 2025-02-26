@@ -1,0 +1,90 @@
+name: CI/CD Pipeline for Next.js with SSH Deployment
+
+on:
+  push:
+    branches:
+      - main  # Chạy khi có commit lên nhánh "main"
+  pull_request:
+    branches:
+      - main  # Chạy trên Pull Request đến nhánh "main"
+
+jobs:
+  build-and-deploy:
+    # Job thực hiện build & deploy Docker Image qua SSH
+    runs-on: ubuntu-latest
+
+    steps:
+      # Bước 1: Checkout mã nguồn từ repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Bước 2: Thiết lập Node.js (sử dụng version 18 như trong package.json)
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      # Bước 3: Cài đặt Dependencies
+      - name: Install dependencies
+        run: yarn install
+
+      # Bước 4: Build ứng dụng Next.js (Next.js sử dụng lệnh `yarn build`)
+      - name: Build the Next.js application
+        run: yarn build
+
+      # Bước 5: Build Docker Image
+      - name: Build Docker Image
+        run: |
+          docker build -t tour-admin:latest .
+
+      # Bước 6: Export Docker Image ra file .tar
+      - name: Save Docker Image to File
+        run: |
+          docker save tour-admin:latest -o tour-admin.tar
+
+      # Bước 7: Upload Docker Image tới server qua SSH
+      - name: Upload Docker Image to Server
+        uses: appleboy/scp-action@v0.1.1
+        with:
+          host: ${{ secrets.SERVER_HOST }}  # Địa chỉ IP hoặc tên miền của server
+          username: ${{ secrets.SERVER_USERNAME }}  # Tài khoản SSH
+          key: ${{ secrets.SSH_PRIVATE_KEY }}  # Private key
+          port: 22  # Cổng SSH (thường là 22)
+          source: "tour-admin.tar"  # File .tar cần truyền
+          target: "~/tour-admin/"  # Đích trên server
+
+      # Bước 8: SSH vào server và triển khai container từ Docker Image
+      - name: Deploy Docker Container to Server
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            # Tạo mạng 'tour_network' nếu nó chưa tồn tại
+            if [ -z "$(docker network ls --filter name=^tour_network$ --format='{{ .Name }}')" ]; then
+              docker network create tour_network
+            fi
+
+            # Nạp lại Docker image từ file tar
+            docker load -i ~/tour-admin/tour-admin.tar
+
+            # Dừng và xóa container cũ nếu đang chạy
+            docker stop tour-admin || true
+            docker rm tour-admin || true
+
+            # Xóa những image cũ không còn sử dụng, TRỪ image mới
+            docker images --filter='dangling=true' -q | xargs -r docker rmi || true
+
+            # Chạy container mới
+            docker run -d \
+              --name tour-admin \
+              -p 8084:8084 \
+              --network tour_network \
+              --restart always \
+              tour-admin:latest
+
+            # Xóa file tar sau khi hoàn tất
+            rm -f ~/tour-admin/tour-admin.tar

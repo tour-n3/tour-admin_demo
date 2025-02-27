@@ -8,6 +8,8 @@ import Typography from '@mui/material/Typography';
 import { useMockedUser } from 'src/hooks/use-mocked-user';
 // routes
 import { paths } from 'src/routes/paths';
+// locales
+import { useLocales } from 'src/locales';
 // components
 import Label from 'src/components/label';
 
@@ -15,6 +17,8 @@ import Label from 'src/components/label';
 
 export default function NavUpgrade() {
   const { user } = useMockedUser();
+
+  const { t } = useLocales();
 
   return (
     <Stack
@@ -54,7 +58,7 @@ export default function NavUpgrade() {
         </Stack>
 
         <Button variant="contained" href={paths.minimalUI} target="_blank" rel="noopener">
-          Upgrade to Pro
+          {t('upgrade_to_pro')}
         </Button>
       </Stack>
     </Stack>

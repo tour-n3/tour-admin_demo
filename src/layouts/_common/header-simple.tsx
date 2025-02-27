@@ -7,6 +7,7 @@ import Toolbar from '@mui/material/Toolbar';
 // theme
 import { bgBlur } from 'src/theme/css';
 // routes
+import { paths } from 'src/routes/paths';
 // hooks
 import { useOffSetTop } from 'src/hooks/use-off-set-top';
 // components
@@ -52,7 +53,12 @@ export default function HeaderSimple() {
         <Stack direction="row" alignItems="center" spacing={1}>
           <SettingsButton />
 
-          <Link href="/" component={RouterLink} color="inherit" sx={{ typography: 'subtitle2' }}>
+          <Link
+            href={paths.faqs}
+            component={RouterLink}
+            color="inherit"
+            sx={{ typography: 'subtitle2' }}
+          >
             Need help?
           </Link>
         </Stack>
